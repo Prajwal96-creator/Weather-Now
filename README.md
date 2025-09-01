@@ -76,7 +76,7 @@ npm run lint
 │   ├── main.jsx              # Entry point
 │   ├── App.css, index.css    # Styles
 │   ├── data/
-│   │   └── cities.json       # City database
+│   │   └── cities.json       # City coordinates database
 │   ├── components/
 │   │   ├── SearchBar.jsx
 │   │   ├── MapWithGeolocator.jsx
