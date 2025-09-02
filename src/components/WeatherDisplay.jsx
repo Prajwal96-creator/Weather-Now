@@ -67,7 +67,17 @@ export default function WeatherDisplay({ location, weather, loading, error }) {
         </div>
       )}
 
-      {error && <div className="p-mt-2 p-text-color-danger">Error: {error}</div>}
+      {/*
+        Show a user-friendly error if fetch failed due to network error (offline),
+        otherwise show the error as is.
+      */}
+      {error && (
+        <div className="p-mt-2 p-text-color-danger">
+          Error: {error === 'Failed to fetch' || error === 'NetworkError when attempting to fetch resource.'
+            ? 'No internet connection. Please check your network and try again.'
+            : error}
+        </div>
+      )}
 
       {!loading && !weather && <div className="p-mt-2">Search a city or click the map to load weather.</div>}
 

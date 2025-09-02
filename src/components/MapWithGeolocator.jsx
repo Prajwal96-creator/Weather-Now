@@ -25,6 +25,17 @@ L.Marker.prototype.options.icon = DefaultIcon;
 export default function MapWithGeolocator({ onLocationSelect }) {
   const mapRef = useRef(null);
   const markerRef = useRef(null);
+  const errorDivRef = useRef(null);
+  // Helper to show error message to user
+  function showError(message) {
+    if (errorDivRef.current) {
+      errorDivRef.current.textContent = message;
+      errorDivRef.current.style.display = 'block';
+    }
+    setTimeout(() => {
+      if (errorDivRef.current) errorDivRef.current.style.display = 'none';
+    }, 5000);
+  }
 
   useEffect(() => {
     if (mapRef.current) return; // already initialized
@@ -49,13 +60,13 @@ export default function MapWithGeolocator({ onLocationSelect }) {
         const center = e.geocode.center;
         map.flyTo(center, 12);
         const name = e.geocode.name || e.geocode.html || `${center.lat},${center.lng}`;
-
-        // fetch weather and show marker
         try {
           const w = await fetchWeather(center.lat, center.lng);
           placeMarker(center.lat, center.lng, name, w);
           if (onLocationSelect) onLocationSelect({ lat: center.lat, lon: center.lng, name, weather: w });
         } catch (err) {
+          // Handle network or API error
+          showError("Failed to fetch weather for this location. Please try again.");
           console.error("Weather fetch failed", err);
         }
       })
@@ -68,16 +79,23 @@ export default function MapWithGeolocator({ onLocationSelect }) {
         const r = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`
         );
+        if (!r.ok) {
+          showError("Network error: Could not reverse geocode location.");
+          return;
+        }
         const json = await r.json();
         const displayName = json?.display_name ?? `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-
         // fetch weather
-        const w = await fetchWeather(lat, lng);
-        placeMarker(lat, lng, displayName, w);
-        if (onLocationSelect) onLocationSelect({ lat, lon: lng, name: displayName, weather: w });
-        // Note: above onLocationSelect receives lon as string by mistake in prior line; ensure we pass correct.
-        if (onLocationSelect) onLocationSelect({ lat, lon: lng, name: displayName, weather: w });
+        try {
+          const w = await fetchWeather(lat, lng);
+          placeMarker(lat, lng, displayName, w);
+          if (onLocationSelect) onLocationSelect({ lat, lon: lng, name: displayName, weather: w });
+        } catch (err) {
+          showError("Failed to fetch weather for this location. Please try again.");
+          console.error("Weather fetch failed", err);
+        }
       } catch (err) {
+        showError("Network error: Could not reverse geocode location.");
         console.error("Reverse geocode or weather error:", err);
       }
     });
@@ -125,17 +143,21 @@ export default function MapWithGeolocator({ onLocationSelect }) {
     };
   }, [onLocationSelect]);
 
-return (
-  <div>
-    <h3>Map</h3>
-    <div
-      id="weather-map"
-      style={{ height: "480px", width: "100%", borderRadius: 8 }}
-    ></div>
-    <small className="p-d-block p-mt-2 p-text-secondary">
-      Click anywhere on the map or use the search box above the map.
-    </small>
-  </div>
-);
+
+  // Render map and error message
+  return (
+    <div>
+      <h3>Map</h3>
+      {/* Error message area */}
+      <div ref={errorDivRef} style={{ display: 'none', color: 'red', marginBottom: 8, fontWeight: 500 }}></div>
+      <div
+        id="weather-map"
+        style={{ height: "480px", width: "100%", borderRadius: 8 }}
+      ></div>
+      <small className="p-d-block p-mt-2 p-text-secondary">
+        Click anywhere on the map or use the search box above the map.
+      </small>
+    </div>
+  );
 
 }
